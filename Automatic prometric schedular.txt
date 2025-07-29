@@ -1,0 +1,89 @@
+// ==UserScript==
+// @name         Auto Book prometric Slot
+// @namespace    http://tampermonkey.net/
+// @version      3.0
+// @description  Auto search, detect prometric slots between specific date, auto-click date → time → next button (with voice alert only)
+// @author       Bhavesh + Chatgpt
+// @match        *://*/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    function speakMessage(msg = "Seats are available") {
+        const utterance = new SpeechSynthesisUtterance(msg);
+        utterance.lang = "en-US";
+        utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function clickSearchButton() {
+        const btn = document.getElementById("searchBtn");
+        if (btn) {
+            console.log("🔁 Clicking Search Availability button...");
+            btn.click();
+        }
+    }
+
+    function findAndClickDateBetween10to15() {
+        const headings = document.querySelectorAll("h2.card-heading-2");
+        for (let heading of headings) {
+            if (heading.innerText.includes("Karachi")) {
+                const fieldset = heading.closest("fieldset");
+                const dateCards = fieldset.querySelectorAll(".card.card-success.card-default");
+
+                for (let card of dateCards) {
+                    const dayElem = card.querySelector("strong");
+                    if (dayElem) {
+                        const day = parseInt(dayElem.textContent.trim());
+                        if (day >= 10 && day <= 15) {
+                            console.log(`📆 Found valid date: ${day}, clicking...`);
+                            speakMessage(); // speak when found
+                            card.click();
+
+                            // Wait for time slots to load
+                            setTimeout(() => {
+                                clickTimeAndNext();
+                            }, 1500);
+
+                            return; // Exit once a valid date is clicked
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function clickTimeAndNext() {
+        // 1. Click the first available time card
+        const timeCard = document.querySelector(".time-card.card-success");
+        if (timeCard) {
+            console.log("⏰ Clicking on time slot...");
+            timeCard.click();
+
+            // 2. Click the "Next" button after time is selected
+            setTimeout(() => {
+                const nextBtn = document.getElementById("nextBtn");
+                if (nextBtn) {
+                    console.log("➡️ Clicking on Next button...");
+                    nextBtn.click();
+                } else {
+                    console.log("⚠️ Next button not found.");
+                }
+            }, 1000);
+        } else {
+            console.log("⏳ Time card not found.");
+        }
+    }
+
+    // Main flow every 10 seconds
+    setInterval(() => {
+        clickSearchButton();
+
+        // Wait for results to load then check
+        setTimeout(() => {
+            findAndClickDateBetween10to15();
+        }, 3000);
+    }, 10000);
+})();
